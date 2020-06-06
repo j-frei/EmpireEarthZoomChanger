@@ -97,8 +97,8 @@ void MainWindow::updateByState(){
         stateStringEE.append(path);
         fileLabel->setText(stateStringEE);
 
-        zoomValue = *(float*) (data.data()+EEzoomPos);
-        cullValue = *(float*) (data.data()+EEcullPos);
+        zoomValue = *(reinterpret_cast<float*>(data.data()+EEzoomPos));
+        cullValue = *(reinterpret_cast<float*>(data.data()+EEcullPos));
 
         zoomEdit->setText(QString::number(zoomValue));
         cullEdit->setText(QString::number(cullValue));
@@ -113,8 +113,41 @@ void MainWindow::updateByState(){
         stateStringEE.append(path);
         fileLabel->setText(stateStringEE);
 
-        zoomValue = *(float*) (data.data()+EEAOCzoomPos);
-        cullValue = *(float*) (data.data()+EEAOCcullPos);
+        zoomValue = *(reinterpret_cast<float*>(data.data()+EEAOCzoomPos));
+        cullValue = *(reinterpret_cast<float*>(data.data()+EEAOCcullPos));
+
+        zoomEdit->setText(QString::number(zoomValue));
+        cullEdit->setText(QString::number(cullValue));
+
+        break;
+    case loadedNeoEE:
+        zoomEdit->setEnabled(true);
+        cullEdit->setEnabled(true);
+        saveBtn->setEnabled(true);
+        saveDefaultBtn->setEnabled(true);
+
+        stateStringEE = QString("File EE (NeoEE Empire Earth) loaded:\n");
+        stateStringEE.append(path);
+        fileLabel->setText(stateStringEE);
+
+        zoomValue = *(reinterpret_cast<float*>(data.data()+NeoEEzoomPos));
+        cullValue = *(reinterpret_cast<float*>(data.data()+NeoEEcullPos));
+
+        zoomEdit->setText(QString::number(zoomValue));
+        cullEdit->setText(QString::number(cullValue));
+        break;
+    case loadedNeoEEAOC:
+        zoomEdit->setEnabled(true);
+        cullEdit->setEnabled(true);
+        saveBtn->setEnabled(true);
+        saveDefaultBtn->setEnabled(true);
+
+        stateStringEE = QString("File EE-AOC (NeoEE Empire Earth - The Art of Conquest) loaded:\n");
+        stateStringEE.append(path);
+        fileLabel->setText(stateStringEE);
+
+        zoomValue = *(reinterpret_cast<float*>(data.data()+NeoEEAOCzoomPos));
+        cullValue = *(reinterpret_cast<float*>(data.data()+NeoEEAOCcullPos));
 
         zoomEdit->setText(QString::number(zoomValue));
         cullEdit->setText(QString::number(cullValue));
@@ -138,20 +171,28 @@ void MainWindow::openFileClicked() {
             (std::istreambuf_iterator<char>())
             );
 
-        if (file.size() == EELength || file.size() == EEAOCLength){
-            MainWindow::path = filepath;
-            MainWindow::data = file;
-            if (file.size() == EELength){
-                std::cout << "File is Empire Earth" << std::endl;
-                MainWindow::state = EEstate::loadedEE;
-            }
-            if (file.size() == EEAOCLength){
-                std::cout << "File is Empire Earth Art of Conquest" << std::endl;
-                MainWindow::state = EEstate::loadedEEAOC;
-            }
+        MainWindow::path = filepath;
+        MainWindow::data = file;
+
+        if (file.size() == EELength) {
+            std::cout << "File is Empire Earth" << std::endl;
+            MainWindow::state = EEstate::loadedEE;
+
+        } else if (file.size() == EEAOCLength) {
+            std::cout << "File is Empire Earth Art of Conquest" << std::endl;
+            MainWindow::state = EEstate::loadedEEAOC;
+
+        } else if (file.size() == NeoEELength) {
+            std::cout << "File is Empire Earth (NeoEE)" << std::endl;
+            MainWindow::state = EEstate::loadedNeoEE;
+
+        } else if (file.size() == NeoEEAOCLength) {
+            std::cout << "File is Empire Earth Art of Conquest (NeoEE)" << std::endl;
+            MainWindow::state = EEstate::loadedNeoEEAOC;
+
         } else {
             std::cout << "Unknown file with size " << std::to_string(file.size()) << std::endl;
-            printErrorMessage("Unknown file! A file with 6321152 or 6319567 bytes is expected!");
+            printErrorMessage("Unknown file! A file of the following size is expected: 6321152, 6319567, 12657664, 12062720 bytes");
             state = EEstate::unloaded;
         }
     } else{
@@ -212,12 +253,12 @@ void MainWindow::overwriteDataArray(float zoom, float cull){
     float *cullPtr = nullptr;
     // find float positions in std::vector data
     if (state == EEstate::loadedEE){
-        zoomPtr = (float*) (data.data()+EEzoomPos);
-        cullPtr = (float*) (data.data()+EEcullPos);
+        zoomPtr = reinterpret_cast<float*>(data.data()+EEzoomPos);
+        cullPtr = reinterpret_cast<float*>(data.data()+EEcullPos);
     }
     if (state == EEstate::loadedEEAOC){
-        zoomPtr = (float*) (data.data()+EEAOCzoomPos);
-        cullPtr = (float*) (data.data()+EEAOCcullPos);
+        zoomPtr = reinterpret_cast<float*>(data.data()+EEAOCzoomPos);
+        cullPtr = reinterpret_cast<float*>(data.data()+EEAOCcullPos);
     }
     // Overwrite floats in loaded data array
     *zoomPtr = zoom;

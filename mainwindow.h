@@ -4,7 +4,7 @@
 #include <QMainWindow>
 #include <QtWidgets>
 
-enum EEstate { unloaded, loadedEE, loadedEEAOC };
+enum EEstate { unloaded, loadedEE, loadedEEAOC, loadedNeoEE, loadedNeoEEAOC };
 
 class MainWindow : public QMainWindow
 {
@@ -45,6 +45,15 @@ private:
     uint EEAOCLength = 6319567; // #bytes
     uint EEAOCzoomPos = 0x441ea0; // float pos
     uint EEAOCcullPos = 0x441ea4; // float pos
+
+    // values for Empire Earth.exe (NeoEE)
+    uint NeoEELength = 12657664; // #bytes
+    uint NeoEEzoomPos = 0x42bf00; // float pos
+    uint NeoEEcullPos = 0x42bf04; // float pos
+    // values for EE-AOC.exe  (NeoEE)
+    uint NeoEEAOCLength = 12062720; // #bytes
+    uint NeoEEAOCzoomPos = 0x441ca0; // float pos
+    uint NeoEEAOCcullPos = 0x441ca4; // float pos
 
     // default values
     float defaultZoom = -20.5;
