@@ -260,6 +260,15 @@ void MainWindow::overwriteDataArray(float zoom, float cull){
         zoomPtr = reinterpret_cast<float*>(data.data()+EEAOCzoomPos);
         cullPtr = reinterpret_cast<float*>(data.data()+EEAOCcullPos);
     }
+    if (state == EEstate::loadedNeoEE){
+        zoomPtr = reinterpret_cast<float*>(data.data()+NeoEEzoomPos);
+        cullPtr = reinterpret_cast<float*>(data.data()+NeoEEcullPos);
+    }
+    if (state == EEstate::loadedNeoEEAOC){
+        zoomPtr = reinterpret_cast<float*>(data.data()+NeoEEAOCzoomPos);
+        cullPtr = reinterpret_cast<float*>(data.data()+NeoEEAOCcullPos);
+    }
+
     // Overwrite floats in loaded data array
     *zoomPtr = zoom;
     *cullPtr = cull;
