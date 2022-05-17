@@ -2,7 +2,7 @@ name: Compile QT5 artifact as PE executable
 on:
   push:
     branches:
-      - main
+      - master
   pull_request: {}
 
 jobs:
