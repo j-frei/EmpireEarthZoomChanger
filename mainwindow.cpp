@@ -18,146 +18,171 @@ MainWindow::MainWindow()
 
     QLabel *infolabel = new QLabel;
     infolabel->setText("Select the file to patch (EE-AOC.exe / Empire Earth.exe)");
-    layout->addWidget(infolabel,0,0,1,2);
+    layout->addWidget(infolabel,0,0,1,3);
 
     QPushButton *loadBtn = new QPushButton;
     loadBtn->setText("open File");
-    layout->addWidget(loadBtn,1,0,1,2);
+    layout->addWidget(loadBtn,1,0,1,3);
 
+    fileString = "No file loaded";
     fileLabel = new QLabel;
-    fileLabel->setText("No file loaded");
-    layout->addWidget(fileLabel,2,0,1,2);
+    layout->addWidget(fileLabel,2,0,1,3);
 
     // Zoom Input
-    QLabel *zoomEditInfo = new QLabel;
-    zoomEditInfo->setText("Zoom (lower=further away), (default: -20.5)");
-    layout->addWidget(zoomEditInfo,3,0,1,1);
+    QLabel *gameZoomEditInfo = new QLabel;
+    gameZoomEditInfo->setText("Zoom (lower=further away), (default: -20.5)");
+    layout->addWidget(gameZoomEditInfo,3,0,1,1);
 
-    zoomEdit = new QLineEdit;
-    //zoomEdit->setText(QString::fromStdString(std::to_string(-20.5)));
-    zoomEdit->setText(QString::number(-20.5));
-    layout->addWidget(zoomEdit,3,1,1,1);
+    gameZoomStatus = new QLabel;
+    layout->addWidget(gameZoomStatus,3,1,1,1);
 
-    // Cull/Fog Input
-    QLabel *cullEditInfo = new QLabel;
-    cullEditInfo->setText("Cull (lower=more fog, faster), (default: 35)");
-    layout->addWidget(cullEditInfo,4,0,1,1);
+    gameZoomChgBtn = new QPushButton;
+    gameZoomChgBtn->setText(u8"🔧");
+    layout->addWidget(gameZoomChgBtn,3,2,1,1);
 
-    cullEdit = new QLineEdit;
-    //cullEdit->setText(QString::fromStdString(std::to_string(35.0)));
-    cullEdit->setText(QString::number(35.0));
-    layout->addWidget(cullEdit,4,1,1,1);
+    // ClipRear/Fog Input
+    QLabel *gameClipRearEditInfo = new QLabel;
+    gameClipRearEditInfo->setText("Rear Clipping (lower=more fog, faster), (default: 35)");
+    layout->addWidget(gameClipRearEditInfo,4,0,1,1);
+
+    gameClipRearStatus = new QLabel;
+    layout->addWidget(gameClipRearStatus,4,1,1,1);
+    
+    gameClipRearChgBtn = new QPushButton;
+    gameClipRearChgBtn->setText(u8"🔧");
+    layout->addWidget(gameClipRearChgBtn,4,2,1,1);
+
+    // Editor
+    QLabel *editorInfo = new QLabel;
+    editorInfo->setText("<b>Scenario Editor Settings</b>");
+    layout->addWidget(editorInfo,5,0,1,3);
+
+    // Editor Checkbox Patch
+    QLabel *editorConstFltPatchCbxInfo = new QLabel;
+    editorConstFltPatchCbxInfo->setText("Enable Patch for Editor modifications");
+    layout->addWidget(editorConstFltPatchCbxInfo,6,0,1,1);
+
+    editorConstFltPatchCbx = new QCheckBox;
+    layout->addWidget(editorConstFltPatchCbx,6,1,1,1);
+
+    // Editor Zoom Input
+    QLabel *editorZoomEditInfo = new QLabel;
+    editorZoomEditInfo->setText("Zoom (lower=further away), (default: -42.0)");
+    layout->addWidget(editorZoomEditInfo,7,0,1,1);
+
+    editorZoomStatus = new QLabel;
+    layout->addWidget(editorZoomStatus,7,1,1,1);
+    
+    editorZoomChgBtn = new QPushButton;
+    editorZoomChgBtn->setText(u8"🔧");
+    layout->addWidget(editorZoomChgBtn,7,2,1,1);
+
+    // Editor ClipRear/Fog Input
+    QLabel *editorClipRearEditInfo = new QLabel;
+    editorClipRearEditInfo->setText("Rear Clipping (lower=more fog, faster), (default: 58)");
+    layout->addWidget(editorClipRearEditInfo,8,0,1,1);
+
+    editorClipRearStatus = new QLabel;
+    layout->addWidget(editorClipRearStatus,8,1,1,1);
+    
+    editorClipRearChgBtn = new QPushButton;
+    editorClipRearChgBtn->setText(u8"🔧");
+    layout->addWidget(editorClipRearChgBtn,8,2,1,1);
+
+    // Restore default values
+    setDefaultBtn = new QPushButton;
+    setDefaultBtn->setText("Set default values");
+    layout->addWidget(setDefaultBtn,9,0,1,3);
 
     // Save Button
     saveBtn = new QPushButton;
     saveBtn->setText("Write values");
-    layout->addWidget(saveBtn,5,0,1,2);
-
-    saveDefaultBtn = new QPushButton;
-    saveDefaultBtn->setText("Write default values");
-    layout->addWidget(saveDefaultBtn,6,0,1,2);
+    layout->addWidget(saveBtn,10,0,1,3);
 
     // Set QWidget as the central layout of the main window
     setCentralWidget(window);
     setWindowFlags(Qt::Dialog | Qt::MSWindowsFixedSizeDialogHint );
     setUnifiedTitleAndToolBarOnMac(true);
 
+    // SIGNAL/SLOT handling
     connect( loadBtn, SIGNAL(clicked()),this,SLOT(openFileClicked()));
+
+    connect( gameZoomChgBtn, SIGNAL(clicked()),this,SLOT(gameZoomChg()));
+    connect( gameClipRearChgBtn, SIGNAL(clicked()),this,SLOT(gameClipRearChg()));
+
+    connect( editorConstFltPatchCbx, SIGNAL(stateChanged(int)),this,SLOT(patchCbxChanged(int)));
+    connect( editorZoomChgBtn, SIGNAL(clicked()),this,SLOT(editorZoomChg()));
+    connect( editorClipRearChgBtn, SIGNAL(clicked()),this,SLOT(editorClipRearChg()));
+
+    connect( setDefaultBtn, SIGNAL(clicked()),this,SLOT(setDefaultClicked()));
     connect( saveBtn, SIGNAL(clicked()),this,SLOT(saveClicked()));
-    connect( saveDefaultBtn, SIGNAL(clicked()),this,SLOT(saveDefaultClicked()));
     updateByState();
 
 }
 
 void MainWindow::updateByState(){
     QString stateStringEE;
-    float zoomValue = defaultZoom;
-    float cullValue = defaultCull;
+    float gameZoomValue = defaultGameZoom;
+    float gameClipRearValue = defaultGameClipRear;
+    float editorConstFlt = defaultEditorConstFlt;
+    float editorZoomValue = defaultEditorZoom;
+    float editorClipRearValue = defaultEditorClipRear;
+    bool hasEditorPatch = false;
 
-    switch (state) {
-    case unloaded:
-        zoomEdit->setEnabled(false);
-        cullEdit->setEnabled(false);
+    if (state == EEstate::unloaded) {
+        gameZoomChgBtn->setEnabled(false);
+        gameClipRearChgBtn->setEnabled(false);
+        editorConstFltPatchCbx->setEnabled(false);
+        editorZoomChgBtn->setEnabled(false);
+        editorClipRearChgBtn->setEnabled(false);
         saveBtn->setEnabled(false);
-        saveDefaultBtn->setEnabled(false);
+        setDefaultBtn->setEnabled(false);
 
-        fileLabel->setText("No file loaded");
+        fileLabel->setText(QString::fromStdString(fileString));
 
-        zoomEdit->setText(QString::number(zoomValue));
-        cullEdit->setText(QString::number(cullValue));
+        gameZoomStatus->setText(QString::fromStdString(std::to_string(defaultGameZoom)));
+        gameClipRearStatus->setText(QString::fromStdString(std::to_string(defaultGameClipRear)));
 
-        break;
-    case loadedEE:
-        zoomEdit->setEnabled(true);
-        cullEdit->setEnabled(true);
+        editorConstFltPatchCbx->setCheckState(Qt::Unchecked);
+        editorZoomStatus->setText(QString::fromStdString(std::to_string(defaultEditorZoom)));
+        editorClipRearStatus->setText(QString::fromStdString(std::to_string(defaultEditorClipRear)));
+    } else {
+        gameZoomChgBtn->setEnabled(true);
+        gameClipRearChgBtn->setEnabled(true);
+        editorConstFltPatchCbx->setEnabled(true);
+
         saveBtn->setEnabled(true);
-        saveDefaultBtn->setEnabled(true);
+        setDefaultBtn->setEnabled(true);
 
-        stateStringEE = QString("File EE (Empire Earth) loaded:\n");
-        stateStringEE.append(path);
-        fileLabel->setText(stateStringEE);
+        fileLabel->setText(QString::fromStdString(fileString));
 
-        zoomValue = *(reinterpret_cast<float*>(data.data()+EEzoomPos));
-        cullValue = *(reinterpret_cast<float*>(data.data()+EEcullPos));
+        gameZoomValue = *loadedGameZoom;
+        gameClipRearValue = *loadedGameClipRear;
 
-        zoomEdit->setText(QString::number(zoomValue));
-        cullEdit->setText(QString::number(cullValue));
-        break;
-    case loadedEEAOC:
-        zoomEdit->setEnabled(true);
-        cullEdit->setEnabled(true);
-        saveBtn->setEnabled(true);
-        saveDefaultBtn->setEnabled(true);
+        gameZoomStatus->setText(QString::fromStdString(std::to_string(gameZoomValue)));
+        gameClipRearStatus->setText(QString::fromStdString(std::to_string(gameClipRearValue)));
 
-        stateStringEE = QString("File EE-AOC (Empire Earth - The Art of Conquest) loaded:\n");
-        stateStringEE.append(path);
-        fileLabel->setText(stateStringEE);
+        editorConstFlt = *loadedEditorConstFlt;
+        hasEditorPatch = defaultGameConstFlt == editorConstFlt;
 
-        zoomValue = *(reinterpret_cast<float*>(data.data()+EEAOCzoomPos));
-        cullValue = *(reinterpret_cast<float*>(data.data()+EEAOCcullPos));
-
-        zoomEdit->setText(QString::number(zoomValue));
-        cullEdit->setText(QString::number(cullValue));
-
-        break;
-    case loadedNeoEE:
-        zoomEdit->setEnabled(true);
-        cullEdit->setEnabled(true);
-        saveBtn->setEnabled(true);
-        saveDefaultBtn->setEnabled(true);
-
-        stateStringEE = QString("File EE (NeoEE Empire Earth) loaded:\n");
-        stateStringEE.append(path);
-        fileLabel->setText(stateStringEE);
-
-        zoomValue = *(reinterpret_cast<float*>(data.data()+NeoEEzoomPos));
-        cullValue = *(reinterpret_cast<float*>(data.data()+NeoEEcullPos));
-
-        zoomEdit->setText(QString::number(zoomValue));
-        cullEdit->setText(QString::number(cullValue));
-        break;
-    case loadedNeoEEAOC:
-        zoomEdit->setEnabled(true);
-        cullEdit->setEnabled(true);
-        saveBtn->setEnabled(true);
-        saveDefaultBtn->setEnabled(true);
-
-        stateStringEE = QString("File EE-AOC (NeoEE Empire Earth - The Art of Conquest) loaded:\n");
-        stateStringEE.append(path);
-        fileLabel->setText(stateStringEE);
-
-        zoomValue = *(reinterpret_cast<float*>(data.data()+NeoEEAOCzoomPos));
-        cullValue = *(reinterpret_cast<float*>(data.data()+NeoEEAOCcullPos));
-
-        zoomEdit->setText(QString::number(zoomValue));
-        cullEdit->setText(QString::number(cullValue));
-
-        break;
-    default:
-        std::cerr << "Unknown state" << std::endl;
-        break;
+        if (hasEditorPatch) {
+            editorConstFltPatchCbx->setCheckState(Qt::Checked);
+            editorZoomChgBtn->setEnabled(true);
+            editorClipRearChgBtn->setEnabled(true);
+            editorZoomValue = *loadedEditorZoom;
+            editorClipRearValue = *loadedEditorClipRear;
+        } else {
+            editorConstFltPatchCbx->setCheckState(Qt::Unchecked);
+            editorZoomChgBtn->setEnabled(false);
+            editorClipRearChgBtn->setEnabled(false);
+            editorZoomValue = defaultEditorZoom;
+            editorClipRearValue = defaultEditorClipRear;
+        }
+        editorZoomStatus->setText(QString::fromStdString(std::to_string(editorZoomValue)));
+        editorClipRearStatus->setText(QString::fromStdString(std::to_string(editorClipRearValue)));
     }
 }
+
 
 void MainWindow::openFileClicked() {
     QString filepath = QFileDialog::getOpenFileName();
@@ -176,109 +201,149 @@ void MainWindow::openFileClicked() {
 
         if (file.size() == EELength) {
             std::cout << "File is Empire Earth" << std::endl;
-            MainWindow::state = EEstate::loadedEE;
-
+            state = EEstate::loadedEE;
+            loadedGameZoom = reinterpret_cast<float*>(data.data()+EEGameZoomPos);
+            loadedGameClipRear = reinterpret_cast<float*>(data.data()+EEGameClipRearPos);
+            loadedEditorConstFlt = reinterpret_cast<float*>(data.data()+EEEditorConstFltPos);
+            loadedEditorZoom = reinterpret_cast<float*>(data.data()+EEEditorZoomPos);
+            loadedEditorClipRear = reinterpret_cast<float*>(data.data()+EEEditorClipRearPos);
+            fileString = "File EE (Empire Earth) loaded:\n" + path.toStdString();
         } else if (file.size() == EEAOCLength) {
             std::cout << "File is Empire Earth Art of Conquest" << std::endl;
-            MainWindow::state = EEstate::loadedEEAOC;
+            state = EEstate::loadedEEAOC;
+            loadedGameZoom = reinterpret_cast<float*>(data.data()+EEAOCGameZoomPos);
+            loadedGameClipRear = reinterpret_cast<float*>(data.data()+EEAOCGameClipRearPos);
+            loadedEditorConstFlt = reinterpret_cast<float*>(data.data()+EEAOCEditorConstFltPos);
+            loadedEditorZoom = reinterpret_cast<float*>(data.data()+EEAOCEditorZoomPos);
+            loadedEditorClipRear = reinterpret_cast<float*>(data.data()+EEAOCEditorClipRearPos);
+            fileString = "File EE-AOC (Empire Earth - The Art of Conquest) loaded:\n" + path.toStdString();
 
         } else if (file.size() == NeoEELength) {
             std::cout << "File is Empire Earth (NeoEE)" << std::endl;
-            MainWindow::state = EEstate::loadedNeoEE;
+            state = EEstate::loadedNeoEE;
+            loadedGameZoom = reinterpret_cast<float*>(data.data()+NeoEEGameZoomPos);
+            loadedGameClipRear = reinterpret_cast<float*>(data.data()+NeoEEGameClipRearPos);
+            loadedEditorConstFlt = reinterpret_cast<float*>(data.data()+NeoEEEditorConstFltPos);
+            loadedEditorZoom = reinterpret_cast<float*>(data.data()+NeoEEEditorZoomPos);
+            loadedEditorClipRear = reinterpret_cast<float*>(data.data()+NeoEEEditorClipRearPos);
+            fileString = "File EE (NeoEE Empire Earth) loaded:\n" + path.toStdString();
 
         } else if (file.size() == NeoEEAOCLength) {
             std::cout << "File is Empire Earth Art of Conquest (NeoEE)" << std::endl;
-            MainWindow::state = EEstate::loadedNeoEEAOC;
+            state = EEstate::loadedNeoEEAOC;
+            loadedGameZoom = reinterpret_cast<float*>(data.data()+NeoEEAOCGameZoomPos);
+            loadedGameClipRear = reinterpret_cast<float*>(data.data()+NeoEEAOCGameClipRearPos);
+            loadedEditorConstFlt = reinterpret_cast<float*>(data.data()+NeoEEAOCEditorConstFltPos);
+            loadedEditorZoom = reinterpret_cast<float*>(data.data()+NeoEEAOCEditorZoomPos);
+            loadedEditorClipRear = reinterpret_cast<float*>(data.data()+NeoEEAOCEditorClipRearPos);
+            fileString = "File EE-AOC (NeoEE Empire Earth - The Art of Conquest) loaded:\n" + path.toStdString();
 
         } else {
             std::cout << "Unknown file with size " << std::to_string(file.size()) << std::endl;
             printErrorMessage("Unknown file! A file of the following size is expected: 6321152, 6319567, 12657664, 12062720 bytes");
             state = EEstate::unloaded;
+            loadedGameZoom = nullptr;
+            loadedGameClipRear = nullptr;
+            loadedEditorConstFlt = nullptr;
+            loadedEditorZoom = nullptr;
+            loadedEditorClipRear = nullptr;
+            fileString = "No file loaded";
         }
     } else{
         printErrorMessage("Error while reading the file");
         state = EEstate::unloaded;
+        loadedGameZoom = nullptr;
+        loadedGameClipRear = nullptr;
+        loadedEditorConstFlt = nullptr;
+        loadedEditorZoom = nullptr;
+        loadedEditorClipRear = nullptr;
+        fileString = "No file loaded";
     }
     inputFile.close();
     updateByState();
 }
 
-void MainWindow::saveClicked() {
-    float zoomValue = defaultZoom;
-    float cullValue = defaultCull;
-    bool validZoom = true;
-    bool validCull = true;
+void MainWindow::gameZoomChg() {
+    if (state == EEstate::unloaded)
+        return;
 
-    // check text fields
-    try {
-        zoomValue = std::stof(zoomEdit->text().toStdString());
-    } catch (...) {
-        validZoom = false;
-    }
-    try {
-        cullValue = std::stof(cullEdit->text().toStdString());
-    } catch (...) {
-        validCull = false;
-    }
+    double val = QInputDialog::getDouble(nullptr, "Set value for Game Zoom",
+               "Value:", *loadedGameZoom);
 
-    if (validZoom && validCull) {
-        overwriteDataArray(zoomValue,cullValue);
+    *loadedGameZoom = val;
+    updateByState();
+}
 
-        // Write data array to file
-        writeFile();
+void MainWindow::gameClipRearChg() {
+    if (state == EEstate::unloaded)
+        return;
 
+    double val = QInputDialog::getDouble(nullptr, "Set value for Game Clip Rear",
+               "Value:", *loadedGameClipRear);
+
+    *loadedGameClipRear = val;
+    updateByState();
+}
+
+void MainWindow::patchCbxChanged(int newState) {
+    // ignore invalid state
+    if (state == EEstate::unloaded)
+        return;
+
+    // Patch binary for scenario editor constant
+    if (newState == Qt::Unchecked) {
+        *loadedEditorConstFlt = defaultEditorConstFlt;
     } else {
-        QString err = "Invalid values.";
-        if (!validZoom)
-            err.append("\nZoom value is invalid");
-        if (!validCull)
-            err.append("\nCull value is invalid");
-
-        printErrorMessage(err);
+        *loadedEditorConstFlt = defaultGameConstFlt;
     }
-
+    *loadedEditorZoom = defaultEditorZoom;
+    *loadedEditorClipRear = defaultEditorClipRear;
+    
     updateByState();
 }
 
-void MainWindow::saveDefaultClicked(){
-    overwriteDataArray(defaultZoom,defaultCull);
-    // Write data array to file
+void MainWindow::editorZoomChg() {
+    if (state == EEstate::unloaded)
+        return;
+
+    double val = QInputDialog::getDouble(nullptr, "Set value for Editor Zoom",
+               "Value:", *loadedEditorZoom);
+
+    *loadedEditorZoom = val;
+    updateByState();
+}
+
+void MainWindow::editorClipRearChg() {
+    if (state == EEstate::unloaded)
+        return;
+
+    double val = QInputDialog::getDouble(nullptr, "Set value for Editor Clip Rear",
+               "Value:", *loadedEditorClipRear);
+
+    *loadedEditorClipRear = val;
+    updateByState();
+}
+
+void MainWindow::setDefaultClicked(){
+    if (state == EEstate::unloaded)
+        return;
+
+    *loadedGameZoom = defaultGameZoom;
+    *loadedGameClipRear = defaultGameClipRear;
+    *loadedEditorConstFlt = defaultEditorConstFlt;
+    *loadedEditorZoom = defaultEditorZoom;
+    *loadedEditorClipRear = defaultEditorClipRear;
+    updateByState();
+}
+
+void MainWindow::saveClicked() {
     writeFile();
-
-    updateByState();
-}
-
-void MainWindow::overwriteDataArray(float zoom, float cull){
-    float *zoomPtr = nullptr;
-    float *cullPtr = nullptr;
-    // find float positions in std::vector data
-    if (state == EEstate::loadedEE){
-        zoomPtr = reinterpret_cast<float*>(data.data()+EEzoomPos);
-        cullPtr = reinterpret_cast<float*>(data.data()+EEcullPos);
-    }
-    if (state == EEstate::loadedEEAOC){
-        zoomPtr = reinterpret_cast<float*>(data.data()+EEAOCzoomPos);
-        cullPtr = reinterpret_cast<float*>(data.data()+EEAOCcullPos);
-    }
-    if (state == EEstate::loadedNeoEE){
-        zoomPtr = reinterpret_cast<float*>(data.data()+NeoEEzoomPos);
-        cullPtr = reinterpret_cast<float*>(data.data()+NeoEEcullPos);
-    }
-    if (state == EEstate::loadedNeoEEAOC){
-        zoomPtr = reinterpret_cast<float*>(data.data()+NeoEEAOCzoomPos);
-        cullPtr = reinterpret_cast<float*>(data.data()+NeoEEAOCcullPos);
-    }
-
-    // Overwrite floats in loaded data array
-    *zoomPtr = zoom;
-    *cullPtr = cull;
 }
 
 void MainWindow::writeFile(){
     // try to write file
     std::ofstream outFile (path.toStdString(),std::ios::out | std::ios::binary);
     if (outFile.good()){
-
         outFile.write(data.data(),data.size());
         outFile.flush();
         printInfoMessage("File was successfully patched!");

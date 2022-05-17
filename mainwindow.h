@@ -18,46 +18,93 @@ protected:
 
 private slots:
     void openFileClicked();
+    
+    void gameZoomChg();
+    void gameClipRearChg();
+    
+    void patchCbxChanged(int newState);
+    void editorZoomChg();
+    void editorClipRearChg();
+
+    void setDefaultClicked();
     void saveClicked();
-    void saveDefaultClicked();
 
 private:
     void printInfoMessage(QString msg, QString detailMsg = nullptr);
     void printErrorMessage(QString msg, QString detailMsg = nullptr);
     void updateByState();
-    void overwriteDataArray(float zoom, float cull);
     void writeFile();
+
     QLabel *fileLabel;
-    QLineEdit *zoomEdit;
-    QLineEdit *cullEdit;
+    
+    QLabel *gameZoomStatus;
+    QPushButton *gameZoomChgBtn;
+    QLabel *gameClipRearStatus;
+    QPushButton *gameClipRearChgBtn;
+
+    QCheckBox *editorConstFltPatchCbx;
+    QLabel *editorZoomStatus;
+    QPushButton *editorZoomChgBtn;
+    QLabel *editorClipRearStatus;
+    QPushButton *editorClipRearChgBtn;
+
+    QPushButton *setDefaultBtn;
     QPushButton *saveBtn;
-    QPushButton *saveDefaultBtn;
 
     EEstate state;
+    float* loadedGameZoom = nullptr;
+    float* loadedGameClipRear = nullptr;
+    float* loadedEditorConstFlt = nullptr;
+    float* loadedEditorZoom = nullptr;
+    float* loadedEditorClipRear = nullptr;
+    std::string fileString;
     QString path;
     std::vector<char> data;
 
     // values for Empire Earth.exe
     uint EELength = 6321152; // #bytes
-    uint EEzoomPos = 0x42b500; // float pos
-    uint EEcullPos = 0x42b504; // float pos
+    uint EEGameConstFltPos = 0x42b4e8; // float pos, Content should not be changed!
+    uint EEEditorConstFltPos = 0x42b4e4; // float pos
+    uint EEGameZoomPos = 0x42b500; // float pos
+    uint EEGameClipRearPos = 0x42b504; // float pos
+    uint EEEditorZoomPos = 0x42b508; // float pos
+    uint EEEditorClipRearPos = 0x42b50c; // float pos
+
     // values for EE-AOC.exe
     uint EEAOCLength = 6319567; // #bytes
-    uint EEAOCzoomPos = 0x441ea0; // float pos
-    uint EEAOCcullPos = 0x441ea4; // float pos
+    uint EEAOCGameConstFltPos = 0x441a88; // float pos, Content should not be changed!
+    uint EEAOCEditorConstFltPos = 0x441a84; // float pos
+    uint EEAOCGameZoomPos = 0x441ea0; // float pos
+    uint EEAOCGameClipRearPos = 0x441ea4; // float pos
+    uint EEAOCEditorZoomPos = 0x441ea8; // float pos
+    uint EEAOCEditorClipRearPos = 0x441eac; // float pos
 
     // values for Empire Earth.exe (NeoEE)
     uint NeoEELength = 12657664; // #bytes
-    uint NeoEEzoomPos = 0x42bf00; // float pos
-    uint NeoEEcullPos = 0x42bf04; // float pos
+    uint NeoEEGameConstFltPos = 0x42bee8; // float pos, Content should not be changed!
+    uint NeoEEEditorConstFltPos = 0x42bee4; // float pos
+    uint NeoEEGameZoomPos = 0x42bf00; // float pos
+    uint NeoEEGameClipRearPos = 0x42bf04; // float pos
+    uint NeoEEEditorZoomPos = 0x42bf08; // float pos
+    uint NeoEEEditorClipRearPos = 0x42bf0c; // float pos
+
     // values for EE-AOC.exe  (NeoEE)
     uint NeoEEAOCLength = 12062720; // #bytes
-    uint NeoEEAOCzoomPos = 0x441ca0; // float pos
-    uint NeoEEAOCcullPos = 0x441ca4; // float pos
+    uint NeoEEAOCGameConstFltPos = 0x441e88; // float pos, Content should not be changed!
+    uint NeoEEAOCEditorConstFltPos = 0x441e84; // float pos
+    uint NeoEEAOCGameZoomPos = 0x441ca0; // float pos
+    uint NeoEEAOCGameClipRearPos = 0x441ca4; // float pos
+    uint NeoEEAOCEditorZoomPos = 0x441ca8; // float pos
+    uint NeoEEAOCEditorClipRearPos = 0x441cac; // float pos
 
     // default values
-    float defaultZoom = -20.5;
-    float defaultCull = 35.0;
+    float defaultGameZoom = -20.5;
+    float defaultGameClipRear = 35.0;
+    float defaultEditorZoom = -42.0;
+    float defaultEditorClipRear = 58.0;
+
+    float defaultGameConstFlt = 0.0; // Content should not be changed!
+    float defaultEditorConstFlt = 0.1;
 };
 
 #endif // MAINWINDOW_H
