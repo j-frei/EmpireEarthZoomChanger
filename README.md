@@ -9,4 +9,4 @@ For 1920x1080 resolution, I recommend the following values:
 - Cull: 55.0
 
 ## Releases
-My own 64bit build can be found at the [release page](https://github.com/j-frei/EmpireEarthZoomChanger/releases).
+The latest `Github Actions`-based binaries (x32, i686) can be found at the [release page](https://github.com/j-frei/EmpireEarthZoomChanger/releases).

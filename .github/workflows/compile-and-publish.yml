@@ -1,0 +1,39 @@
+name: Compile QT5 artifact as PE executable
+on:
+  push:
+    branches:
+      - main
+  pull_request: {}
+
+jobs:
+  compile-and-publish:
+    name: Compile to web
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Install basic dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y software-properties-common lsb-release
+      - name: Add MXE repositories
+        run: |
+          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 86B72ED9
+          sudo add-apt-repository -y "deb [arch=amd64] https://pkg.mxe.cc/repos/apt `lsb_release -sc` main"
+          sudo apt-get update -qq
+      - name: Install dependencies
+        run: |
+          sudo apt-get install -y mxe-i686-w64-mingw32.static-qt5
+      - uses: actions/checkout@v2
+      - name: Crosscompile PE exe
+        run: |
+          export PATH=/usr/lib/mxe/usr/bin:$PATH
+          i686-w64-mingw32.static-qmake-qt5
+          make
+      - name: Prepare date-based tag name
+        run: echo "NOW=$(date +'%Y.%m.%d')" >> $GITHUB_ENV
+      - name: Upload binaries to release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Compiled CI/CD artifact
+          body: "Latest i686 (x32) Qt5 app built by GitHub Actions"
+          tag_name: "${{ env.NOW }}"
+          files: release/EmpireEarthZoomChanger.exe
