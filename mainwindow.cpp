@@ -143,7 +143,9 @@ void MainWindow::updateByState(){
         gameZoomStatus->setText(QString::fromStdString(std::to_string(defaultGameZoom)));
         gameClipRearStatus->setText(QString::fromStdString(std::to_string(defaultGameClipRear)));
 
+        editorConstFltPatchCbx->blockSignals(true);
         editorConstFltPatchCbx->setCheckState(Qt::Unchecked);
+        editorConstFltPatchCbx->blockSignals(false);
         editorZoomStatus->setText(QString::fromStdString(std::to_string(defaultEditorZoom)));
         editorClipRearStatus->setText(QString::fromStdString(std::to_string(defaultEditorClipRear)));
     } else {
@@ -165,14 +167,18 @@ void MainWindow::updateByState(){
         editorConstFlt = *loadedEditorConstFlt;
         hasEditorPatch = defaultGameConstFlt == editorConstFlt;
 
-        if (hasEditorPatch) {
+        if (hasEditorPatch) {            
+            editorConstFltPatchCbx->blockSignals(true);
             editorConstFltPatchCbx->setCheckState(Qt::Checked);
+            editorConstFltPatchCbx->blockSignals(false);
             editorZoomChgBtn->setEnabled(true);
             editorClipRearChgBtn->setEnabled(true);
             editorZoomValue = *loadedEditorZoom;
             editorClipRearValue = *loadedEditorClipRear;
         } else {
+            editorConstFltPatchCbx->blockSignals(true);
             editorConstFltPatchCbx->setCheckState(Qt::Unchecked);
+            editorConstFltPatchCbx->blockSignals(false);
             editorZoomChgBtn->setEnabled(false);
             editorClipRearChgBtn->setEnabled(false);
             editorZoomValue = defaultEditorZoom;
