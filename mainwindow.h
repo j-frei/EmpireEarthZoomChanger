@@ -72,8 +72,8 @@ private:
 
     // values for EE-AOC.exe
     uint EEAOCLength = 6319567; // #bytes
-    uint EEAOCGameConstFltPos = 0x441a88; // float pos, Content should not be changed!
-    uint EEAOCEditorConstFltPos = 0x441a84; // float pos
+    uint EEAOCGameConstFltPos = 0x441e88; // float pos, Content should not be changed!
+    uint EEAOCEditorConstFltPos = 0x441e84; // float pos
     uint EEAOCGameZoomPos = 0x441ea0; // float pos
     uint EEAOCGameClipRearPos = 0x441ea4; // float pos
     uint EEAOCEditorZoomPos = 0x441ea8; // float pos
