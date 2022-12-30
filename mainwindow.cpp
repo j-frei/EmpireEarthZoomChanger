@@ -256,7 +256,7 @@ void MainWindow::openFileClicked() {
 
         } else {
             std::cout << "Unknown file with size " << std::to_string(file.size()) << std::endl;
-            printErrorMessage("Unknown file! A file of the following size is expected: 6321152, 6319567, 12657664, 12062720 bytes");
+            printErrorMessage("Unknown file! A file of the following size is expected: 6321152, 6319567, 12657664, 12062720, 4079617 bytes");
             state = EEstate::unloaded;
             loadedGameZoom = nullptr;
             loadedGameClipRear = nullptr;
