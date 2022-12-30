@@ -47,7 +47,7 @@ MainWindow::MainWindow()
 
     gameClipRearStatus = new QLabel;
     layout->addWidget(gameClipRearStatus,4,1,1,1);
-    
+
     gameClipRearChgBtn = new QPushButton;
     gameClipRearChgBtn->setText(u8"🔧");
     layout->addWidget(gameClipRearChgBtn,4,2,1,1);
@@ -72,7 +72,7 @@ MainWindow::MainWindow()
 
     editorZoomStatus = new QLabel;
     layout->addWidget(editorZoomStatus,7,1,1,1);
-    
+
     editorZoomChgBtn = new QPushButton;
     editorZoomChgBtn->setText(u8"🔧");
     layout->addWidget(editorZoomChgBtn,7,2,1,1);
@@ -84,7 +84,7 @@ MainWindow::MainWindow()
 
     editorClipRearStatus = new QLabel;
     layout->addWidget(editorClipRearStatus,8,1,1,1);
-    
+
     editorClipRearChgBtn = new QPushButton;
     editorClipRearChgBtn->setText(u8"🔧");
     layout->addWidget(editorClipRearChgBtn,8,2,1,1);
@@ -167,7 +167,7 @@ void MainWindow::updateByState(){
         editorConstFlt = *loadedEditorConstFlt;
         hasEditorPatch = defaultGameConstFlt == editorConstFlt;
 
-        if (hasEditorPatch) {            
+        if (hasEditorPatch) {
             editorConstFltPatchCbx->blockSignals(true);
             editorConstFltPatchCbx->setCheckState(Qt::Checked);
             editorConstFltPatchCbx->blockSignals(false);
@@ -244,6 +244,16 @@ void MainWindow::openFileClicked() {
             loadedEditorClipRear = reinterpret_cast<float*>(data.data()+NeoEEAOCEditorClipRearPos);
             fileString = "File EE-AOC (NeoEE Empire Earth - The Art of Conquest) loaded:\n" + path.toStdString();
 
+        } else if (file.size() == EENoCDLength) {
+            std::cout << "File is Empire Earth (No CD)" << std::endl;
+            state = EEstate::loadedEENoCD;
+            loadedGameZoom = reinterpret_cast<float*>(data.data()+EENoCDGameZoomPos);
+            loadedGameClipRear = reinterpret_cast<float*>(data.data()+EENoCDGameClipRearPos);
+            loadedEditorConstFlt = reinterpret_cast<float*>(data.data()+EENoCDEditorConstFltPos);
+            loadedEditorZoom = reinterpret_cast<float*>(data.data()+EENoCDEditorZoomPos);
+            loadedEditorClipRear = reinterpret_cast<float*>(data.data()+EENoCDEditorClipRearPos);
+            fileString = "File EE (Empire Earth No CD) loaded:\n" + path.toStdString();
+
         } else {
             std::cout << "Unknown file with size " << std::to_string(file.size()) << std::endl;
             printErrorMessage("Unknown file! A file of the following size is expected: 6321152, 6319567, 12657664, 12062720 bytes");
@@ -304,7 +314,7 @@ void MainWindow::patchCbxChanged(int newState) {
     }
     *loadedEditorZoom = defaultEditorZoom;
     *loadedEditorClipRear = defaultEditorClipRear;
-    
+
     updateByState();
 }
 

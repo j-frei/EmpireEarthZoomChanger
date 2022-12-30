@@ -4,7 +4,7 @@
 #include <QMainWindow>
 #include <QtWidgets>
 
-enum EEstate { unloaded, loadedEE, loadedEEAOC, loadedNeoEE, loadedNeoEEAOC };
+enum EEstate { unloaded, loadedEE, loadedEEAOC, loadedNeoEE, loadedNeoEEAOC, loadedEENoCD };
 
 class MainWindow : public QMainWindow
 {
@@ -18,10 +18,10 @@ protected:
 
 private slots:
     void openFileClicked();
-    
+
     void gameZoomChg();
     void gameClipRearChg();
-    
+
     void patchCbxChanged(int newState);
     void editorZoomChg();
     void editorClipRearChg();
@@ -36,7 +36,7 @@ private:
     void writeFile();
 
     QLabel *fileLabel;
-    
+
     QLabel *gameZoomStatus;
     QPushButton *gameZoomChgBtn;
     QLabel *gameClipRearStatus;
@@ -90,12 +90,21 @@ private:
 
     // values for EE-AOC.exe  (NeoEE)
     uint NeoEEAOCLength = 12062720; // #bytes
-    uint NeoEEAOCGameConstFltPos = 0x441e88; // float pos, Content should not be changed!
-    uint NeoEEAOCEditorConstFltPos = 0x441e84; // float pos
+    uint NeoEEAOCGameConstFltPos = 0x441c88; // float pos, Content should not be changed!
+    uint NeoEEAOCEditorConstFltPos = 0x441c84; // float pos
     uint NeoEEAOCGameZoomPos = 0x441ca0; // float pos
     uint NeoEEAOCGameClipRearPos = 0x441ca4; // float pos
     uint NeoEEAOCEditorZoomPos = 0x441ca8; // float pos
     uint NeoEEAOCEditorClipRearPos = 0x441cac; // float pos
+
+    // values for Empire Earth.exe (No CD)
+    uint EENoCDLength = 4079617; // #bytes
+    uint EENoCDGameConstFltPos = 0x2ad4b0; // float pos, Content should not be changed!
+    uint EENoCDEditorConstFltPos = 0x2ad4ac; // float pos
+    uint EENoCDGameZoomPos = 0x2ad4c8; // float pos
+    uint EENoCDGameClipRearPos = 0x2ad4cc; // float pos
+    uint EENoCDEditorZoomPos = 0x2ad4d0; // float pos
+    uint EENoCDEditorClipRearPos = 0x2ad4d4; // float pos
 
     // default values
     float defaultGameZoom = -20.5;
