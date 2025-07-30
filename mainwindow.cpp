@@ -224,6 +224,26 @@ void MainWindow::openFileClicked() {
             loadedEditorClipRear = reinterpret_cast<float*>(data.data()+EEAOCEditorClipRearPos);
             fileString = "File EE-AOC (Empire Earth - The Art of Conquest) loaded:\n" + path.toStdString();
 
+        } else if (file.size() == EEGOG25Length) {
+            std::cout << "File is Empire Earth (GOG 2025 Update)" << std::endl;
+            state = EEstate::loadedEEGOG25;
+            loadedGameZoom = reinterpret_cast<float*>(data.data()+EEGOG25GameZoomPos);
+            loadedGameClipRear = reinterpret_cast<float*>(data.data()+EEGOG25GameClipRearPos);
+            loadedEditorConstFlt = reinterpret_cast<float*>(data.data()+EEGOG25EditorConstFltPos);
+            loadedEditorZoom = reinterpret_cast<float*>(data.data()+EEGOG25EditorZoomPos);
+            loadedEditorClipRear = reinterpret_cast<float*>(data.data()+EEGOG25EditorClipRearPos);
+            fileString = "File EE (Empire Earth; GOG 2025 Update) loaded:\n" + path.toStdString();
+
+        } else if (file.size() == EEAOCGOG25Length) {
+            std::cout << "File is Empire Earth Art of Conquest (GOG 2025 Update)" << std::endl;
+            state = EEstate::loadedEEAOC;
+            loadedGameZoom = reinterpret_cast<float*>(data.data()+EEAOCGOG25GameZoomPos);
+            loadedGameClipRear = reinterpret_cast<float*>(data.data()+EEAOCGOG25GameClipRearPos);
+            loadedEditorConstFlt = reinterpret_cast<float*>(data.data()+EEAOCGOG25EditorConstFltPos);
+            loadedEditorZoom = reinterpret_cast<float*>(data.data()+EEAOCGOG25EditorZoomPos);
+            loadedEditorClipRear = reinterpret_cast<float*>(data.data()+EEAOCGOG25EditorClipRearPos);
+            fileString = "File EE-AOC (Empire Earth - The Art of Conquest; GOG 2025 Update) loaded:\n" + path.toStdString();
+
         } else if (file.size() == NeoEELength) {
             std::cout << "File is Empire Earth (NeoEE)" << std::endl;
             state = EEstate::loadedNeoEE;
@@ -256,7 +276,7 @@ void MainWindow::openFileClicked() {
 
         } else {
             std::cout << "Unknown file with size " << std::to_string(file.size()) << std::endl;
-            printErrorMessage("Unknown file! A file of the following size is expected: 6321152, 6319567, 12657664, 12062720, 4079617 bytes");
+            printErrorMessage("Unknown file! A file of the following size is expected: 6321152, 6321664, 6319567, 6262784, 12657664, 12062720, 4079617 bytes");
             state = EEstate::unloaded;
             loadedGameZoom = nullptr;
             loadedGameClipRear = nullptr;

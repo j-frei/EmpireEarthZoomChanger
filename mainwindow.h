@@ -4,7 +4,7 @@
 #include <QMainWindow>
 #include <QtWidgets>
 
-enum EEstate { unloaded, loadedEE, loadedEEAOC, loadedNeoEE, loadedNeoEEAOC, loadedEENoCD };
+enum EEstate { unloaded, loadedEE, loadedEEAOC, loadedEEGOG25, loadedEEAOCGOG25, loadedNeoEE, loadedNeoEEAOC, loadedEENoCD };
 
 class MainWindow : public QMainWindow
 {
@@ -70,6 +70,15 @@ private:
     uint EEEditorZoomPos = 0x42b508; // float pos
     uint EEEditorClipRearPos = 0x42b50c; // float pos
 
+    // values for Empire Earth.exe (GOG 2025); identical to default Empire Earth.exe
+    uint EEGOG25Length = 6321664; // #bytes
+    uint EEGOG25GameConstFltPos = 0x42b4e8; // float pos, Content should not be changed!
+    uint EEGOG25EditorConstFltPos = 0x42b4e4; // float pos
+    uint EEGOG25GameZoomPos = 0x42b500; // float pos
+    uint EEGOG25GameClipRearPos = 0x42b504; // float pos
+    uint EEGOG25EditorZoomPos = 0x42b508; // float pos
+    uint EEGOG25EditorClipRearPos = 0x42b50c; // float pos
+
     // values for EE-AOC.exe
     uint EEAOCLength = 6319567; // #bytes
     uint EEAOCGameConstFltPos = 0x441e88; // float pos, Content should not be changed!
@@ -78,6 +87,15 @@ private:
     uint EEAOCGameClipRearPos = 0x441ea4; // float pos
     uint EEAOCEditorZoomPos = 0x441ea8; // float pos
     uint EEAOCEditorClipRearPos = 0x441eac; // float pos
+
+    // values for EE-AOC.exe (GOG 2025); identical to default EE-AOC.exe
+    uint EEAOCGOG25Length = 6262784; // #bytes
+    uint EEAOCGOG25GameConstFltPos = 0x441e88; // float pos, Content should not be changed!
+    uint EEAOCGOG25EditorConstFltPos = 0x441e84; // float pos
+    uint EEAOCGOG25GameZoomPos = 0x441ea0; // float pos
+    uint EEAOCGOG25GameClipRearPos = 0x441ea4; // float pos
+    uint EEAOCGOG25EditorZoomPos = 0x441ea8; // float pos
+    uint EEAOCGOG25EditorClipRearPos = 0x441eac; // float pos
 
     // values for Empire Earth.exe (NeoEE)
     uint NeoEELength = 12657664; // #bytes
