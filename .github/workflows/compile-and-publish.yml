@@ -1,4 +1,4 @@
-name: Build Qt5 i686 Windows App with MSYS2
+name: Build Qt5 i686 Windows App (Static Qt MSVC x86)
 
 on:
   push:
@@ -10,58 +10,60 @@ on:
 jobs:
   build:
     runs-on: windows-latest
-    defaults:
-      run:
-        shell: msys2 {0}
 
     steps:
-      - name: Checkout code
+      - name: Checkout Repository
         uses: actions/checkout@v3
 
-      - name: Setup MSYS2
-        uses: msys2/setup-msys2@v2
-        with:
-          update: true
-          install: >-
-            base-devel
-            mingw-w64-i686-toolchain
-            mingw-w64-i686-qt5
-            mingw-w64-i686-cmake
-            mingw-w64-i686-make
-            git
-
-      - name: Add MinGW to PATH
-        run: echo "C:/msys64/mingw32/bin" >> $GITHUB_PATH
-
-      - name: Build with qmake
+      - name: Install Build Dependencies
+        shell: powershell
         run: |
-          cd ${{ github.workspace }}
-          qmake
-          make -j$(nproc)
+          choco install strawberryperl python3 -y
+          git config --global core.autocrlf false
 
-      - name: Archive the build
-        uses: actions/upload-artifact@v4
-        with:
-          name: EmpireEarthZoomChanger
-          path: EmpireEarthZoomChanger.exe
+      - name: Download Qt 5.15.2 Source
+        run: |
+          curl -LO https://download.qt.io/official_releases/qt/5.15/5.15.2/single/qt-everywhere-src-5.15.2.zip
+          tar -xf qt-everywhere-src-5.15.2.zip
+          ren qt-everywhere-src-5.15.2 QtSrc
 
-  release:
-    needs: build
-    runs-on: ubuntu-latest
+      - name: Configure Qt for Static MSVC x86
+        shell: cmd
+        run: |
+          call "%ProgramFiles(x86)%\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars32.bat"
+          cd QtSrc
+          configure -static -release -platform win32-msvc ^
+            -prefix C:\QtInstall ^
+            -opensource -confirm-license ^
+            -nomake examples -nomake tests ^
+            -skip qtwebengine
 
-    steps:
-      - name: Download build artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: EmpireEarthZoomChanger
+      - name: Build and Install Static Qt
+        shell: cmd
+        run: |
+          call "%ProgramFiles(x86)%\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars32.bat"
+          cd QtSrc
+          nmake
+          nmake install
 
-      - name: Prepare date-based tag name
-        run: echo "NOW=$(date +'%Y.%m.%d')" >> $GITHUB_ENV
+      - name: Build EmpireEarthZoomChanger
+        shell: cmd
+        run: |
+          call "%ProgramFiles(x86)%\Microsoft Visual Studio\2019\Enterprise\VC\Auxiliary\Build\vcvars32.bat"
+          set PATH=C:\QtInstall\bin;%PATH%
+          qmake CONFIG+=release EmpireEarthZoomChanger.pro
+          nmake
 
-      - name: Upload binaries to release
+      - name: Set tag name (YYYY-MM-DD)
+        id: set_date_tag
+        shell: bash
+        run: |
+          echo "now=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+
+      - name: Upload to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
-          name: Compiled CI/CD artifact
-          body: "Latest i686 (x32) Qt5 app built automatically by GitHub Actions (MSYS2)"
-          tag_name: "release-${{ env.NOW }}"
           files: release/EmpireEarthZoomChanger.exe
+          name: Compiled CI/CD artifact
+          body: "Latest i686 (x32) Qt5 app built automatically by GitHub Actions"
+          tag_name: "release-${{ steps.set_date_tag.outputs.now }}"
