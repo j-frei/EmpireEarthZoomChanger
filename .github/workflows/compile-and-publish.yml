@@ -40,7 +40,7 @@ jobs:
           make -j$(nproc)
 
       - name: Archive the build
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: EmpireEarthZoomChanger
           path: EmpireEarthZoomChanger.exe
@@ -51,36 +51,18 @@ jobs:
 
     steps:
       - name: Download build artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: EmpireEarthZoomChanger
 
-      - name: Generate Date-Based Tag and Release Name
-        run: |
-          # Get the current date in YYYY-MM-DD format
-          DATE=$(date +'%Y-%m-%d')
-          echo "TAG_NAME=release-$DATE" >> $GITHUB_ENV
-          echo "RELEASE_NAME=Release $DATE" >> $GITHUB_ENV
+      - name: Generate date-based tag name
+      - name: Prepare date-based tag name
+        run: echo "NOW=$(date +'%Y.%m.%d')" >> $GITHUB_ENV
 
-      - name: Create a GitHub Release
-        id: make_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload binaries to release
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ env.TAG_NAME }}
-          release_name: ${{ env.RELEASE_NAME }}
-          body: |
-            Latest i686 (x32) Qt5 app built automatically by GitHub Actions (MSYS2)
-          draft: false
-          prerelease: false
-
-      - name: Upload Release Asset
-        uses: actions/upload-release-asset@v1
-        with:
-          upload_url: ${{ steps.make_release.outputs.upload_url }}
-          asset_path: ./EmpireEarthZoomChanger.exe
-          asset_name: EmpireEarthZoomChanger.exe
-          asset_content_type: application/octet-stream
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: Compiled CI/CD artifact
+          body: "Latest i686 (x32) Qt5 app built automatically by GitHub Actions (MSYS2)"
+          tag_name: "release-${{ env.NOW }}"
+          files: release/EmpireEarthZoomChanger.exe
