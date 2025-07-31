@@ -55,7 +55,6 @@ jobs:
         with:
           name: EmpireEarthZoomChanger
 
-      - name: Generate date-based tag name
       - name: Prepare date-based tag name
         run: echo "NOW=$(date +'%Y.%m.%d')" >> $GITHUB_ENV
 
