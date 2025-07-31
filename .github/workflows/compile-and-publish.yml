@@ -30,7 +30,7 @@ jobs:
       - name: Configure Qt for Static MSVC x86
         shell: cmd
         run: |
-          call "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars32.bat"
+          call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars32.bat"
           cd QtSrc
           configure -static -release -platform win32-msvc ^
             -prefix C:\QtInstall ^
@@ -41,7 +41,7 @@ jobs:
       - name: Build and Install Static Qt
         shell: cmd
         run: |
-          call "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars32.bat"
+          call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars32.bat"
           cd QtSrc
           nmake
           nmake install
@@ -49,7 +49,7 @@ jobs:
       - name: Build EmpireEarthZoomChanger
         shell: cmd
         run: |
-          call "%ProgramFiles(x86)%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars32.bat"
+          call "%ProgramFiles%\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars32.bat"
           set PATH=C:\QtInstall\bin;%PATH%
           qmake CONFIG+=release EmpireEarthZoomChanger.pro
           nmake
