@@ -1,4 +1,5 @@
-name: Compile QT5 artifact as PE executable
+name: Build Qt5 i686 Windows App with MSYS2
+
 on:
   push:
     branches:
@@ -7,34 +8,79 @@ on:
   workflow_dispatch:
 
 jobs:
-  compile-and-publish:
-    name: Compile to web
-    runs-on: ubuntu-20.04
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+
     steps:
-      - name: Install basic dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y software-properties-common lsb-release
-      - name: Add MXE repositories
-        run: |
-          sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 86B72ED9
-          sudo add-apt-repository -y "deb [arch=amd64] https://pkg.mxe.cc/repos/apt `lsb_release -sc` main"
-          sudo apt-get update -qq
-      - name: Install dependencies
-        run: |
-          sudo apt-get install -y mxe-i686-w64-mingw32.static-qt5
-      - uses: actions/checkout@v2
-      - name: Crosscompile PE exe
-        run: |
-          export PATH=/usr/lib/mxe/usr/bin:$PATH
-          i686-w64-mingw32.static-qmake-qt5
-          make
-      - name: Prepare date-based tag name
-        run: echo "NOW=$(date +'%Y.%m.%d')" >> $GITHUB_ENV
-      - name: Upload binaries to release
-        uses: softprops/action-gh-release@v1
+      - name: Checkout code
+      - uses: actions/checkout@v3
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
         with:
-          name: Compiled CI/CD artifact
-          body: "Latest i686 (x32) Qt5 app built by GitHub Actions"
-          tag_name: "${{ env.NOW }}"
-          files: release/EmpireEarthZoomChanger.exe
+          update: true
+          install: >-
+            base-devel
+            mingw-w64-i686-toolchain
+            mingw-w64-i686-qt5
+            mingw-w64-i686-cmake
+            mingw-w64-i686-make
+            git
+
+      - name: Add MinGW to PATH
+        run: echo "C:/msys64/mingw32/bin" >> $GITHUB_PATH
+
+      - name: Build with qmake
+        run: |
+          cd ${{ github.workspace }}
+          qmake
+          make -j$(nproc)
+
+      - name: Archive the build
+        uses: actions/upload-artifact@v3
+        with:
+          name: EmpireEarthZoomChanger
+          path: EmpireEarthZoomChanger.exe
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download build artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: EmpireEarthZoomChanger
+
+      - name: Generate Date-Based Tag and Release Name
+        run: |
+          # Get the current date in YYYY-MM-DD format
+          DATE=$(date +'%Y-%m-%d')
+          echo "TAG_NAME=release-$DATE" >> $GITHUB_ENV
+          echo "RELEASE_NAME=Release $DATE" >> $GITHUB_ENV
+
+      - name: Create a GitHub Release
+        id: make_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          release_name: ${{ env.RELEASE_NAME }}
+          body: |
+            Latest i686 (x32) Qt5 app built automatically by GitHub Actions (MSYS2)
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.make_release.outputs.upload_url }}
+          asset_path: ./EmpireEarthZoomChanger.exe
+          asset_name: EmpireEarthZoomChanger.exe
+          asset_content_type: application/octet-stream
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
