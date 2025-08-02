@@ -25,6 +25,9 @@ DEFINES += QT_DEPRECATED_WARNINGS
 CONFIG += c++11
 CONFIG += static
 
+CODECFORSRC = UTF-8
+QMAKE_CXXFLAGS += /utf-8
+
 SOURCES += \
         main.cpp \
         mainwindow.cpp
