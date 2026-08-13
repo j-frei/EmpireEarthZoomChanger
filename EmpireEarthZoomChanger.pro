@@ -26,7 +26,9 @@ CONFIG += c++11
 CONFIG += static
 
 CODECFORSRC = UTF-8
-QMAKE_CXXFLAGS += /utf-8
+
+# /utf-8 (MSVC-only flag)
+msvc: QMAKE_CXXFLAGS += /utf-8
 
 SOURCES += \
         main.cpp \

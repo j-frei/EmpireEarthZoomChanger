@@ -1,14 +1,32 @@
 #include "mainwindow.h"
 #include <QtWidgets>
 #include <QMainWindow>
+#include <algorithm>
+#include <cmath>
+#include <cstring>
 #include <iostream>
 #include <fstream>
 #include <string>
 
+const std::vector<unsigned char> MainWindow::CameraPrefixPattern = {
+    0xcd, 0xcc, 0xcc, 0x3d,
+    0xcd, 0xcc, 0xcc, 0x3e,
+    0x00, 0x00, 0x20, 0x41,
+    0x35, 0xfa, 0x8e, 0x3c,
+    0xdb, 0x0f, 0x49, 0x3f
+};
+const std::vector<unsigned char> MainWindow::AudioPrefixPattern = {
+    0x8f, 0xc2, 0xb5, 0x3f,
+    0xcd, 0xcc, 0xcc, 0xbe,
+    0x0a, 0xd7, 0xa3, 0x3b,
+    0x0a, 0xd7, 0xa3, 0xbb,
+    0x00, 0x00, 0x80, 0x3f
+};
+
 MainWindow::MainWindow()
 
 {
-    MainWindow::state = EEstate::unloaded;
+    MainWindow::loaded = false;
 
     // Set layout in QWidget
     QWidget *window = new QWidget();
@@ -52,52 +70,78 @@ MainWindow::MainWindow()
     gameClipRearChgBtn->setText(u8"🔧");
     layout->addWidget(gameClipRearChgBtn,4,2,1,1);
 
+    // Audio
+    QLabel *audioInfo = new QLabel;
+    audioInfo->setText("<b>Audio Distance</b>");
+    layout->addWidget(audioInfo,5,0,1,3);
+
+    // Audio Link Checkbox
+    QLabel *audioLinkCbxInfo = new QLabel;
+    audioLinkCbxInfo->setText("Derive from Rear Clipping");
+    layout->addWidget(audioLinkCbxInfo,6,0,1,1);
+
+    audioLinkCbx = new QCheckBox;
+    audioLinkCbx->setChecked(true);
+    layout->addWidget(audioLinkCbx,6,1,1,1);
+
+    // Audio Cutoff Input
+    QLabel *audioCutoffEditInfo = new QLabel;
+    audioCutoffEditInfo->setText("Audio cutoff distance (units beyond are mute), (default: 35)");
+    layout->addWidget(audioCutoffEditInfo,7,0,1,1);
+
+    audioCutoffStatus = new QLabel;
+    layout->addWidget(audioCutoffStatus,7,1,1,1);
+
+    audioCutoffChgBtn = new QPushButton;
+    audioCutoffChgBtn->setText(u8"🔧");
+    layout->addWidget(audioCutoffChgBtn,7,2,1,1);
+
     // Editor
     QLabel *editorInfo = new QLabel;
     editorInfo->setText("<b>Scenario Editor Settings</b>");
-    layout->addWidget(editorInfo,5,0,1,3);
+    layout->addWidget(editorInfo,8,0,1,3);
 
     // Editor Checkbox Patch
     QLabel *editorConstFltPatchCbxInfo = new QLabel;
     editorConstFltPatchCbxInfo->setText("Enable Patch for Editor modifications");
-    layout->addWidget(editorConstFltPatchCbxInfo,6,0,1,1);
+    layout->addWidget(editorConstFltPatchCbxInfo,9,0,1,1);
 
     editorConstFltPatchCbx = new QCheckBox;
-    layout->addWidget(editorConstFltPatchCbx,6,1,1,1);
+    layout->addWidget(editorConstFltPatchCbx,9,1,1,1);
 
     // Editor Zoom Input
     QLabel *editorZoomEditInfo = new QLabel;
     editorZoomEditInfo->setText("Zoom (lower=further away), (default: -42.0)");
-    layout->addWidget(editorZoomEditInfo,7,0,1,1);
+    layout->addWidget(editorZoomEditInfo,10,0,1,1);
 
     editorZoomStatus = new QLabel;
-    layout->addWidget(editorZoomStatus,7,1,1,1);
+    layout->addWidget(editorZoomStatus,10,1,1,1);
 
     editorZoomChgBtn = new QPushButton;
     editorZoomChgBtn->setText(u8"🔧");
-    layout->addWidget(editorZoomChgBtn,7,2,1,1);
+    layout->addWidget(editorZoomChgBtn,10,2,1,1);
 
     // Editor ClipRear/Fog Input
     QLabel *editorClipRearEditInfo = new QLabel;
     editorClipRearEditInfo->setText("Rear Clipping (lower=more fog, faster), (default: 58)");
-    layout->addWidget(editorClipRearEditInfo,8,0,1,1);
+    layout->addWidget(editorClipRearEditInfo,11,0,1,1);
 
     editorClipRearStatus = new QLabel;
-    layout->addWidget(editorClipRearStatus,8,1,1,1);
+    layout->addWidget(editorClipRearStatus,11,1,1,1);
 
     editorClipRearChgBtn = new QPushButton;
     editorClipRearChgBtn->setText(u8"🔧");
-    layout->addWidget(editorClipRearChgBtn,8,2,1,1);
+    layout->addWidget(editorClipRearChgBtn,11,2,1,1);
 
     // Restore default values
     setDefaultBtn = new QPushButton;
     setDefaultBtn->setText("Set default values");
-    layout->addWidget(setDefaultBtn,9,0,1,3);
+    layout->addWidget(setDefaultBtn,12,0,1,3);
 
     // Save Button
     saveBtn = new QPushButton;
     saveBtn->setText("Write values");
-    layout->addWidget(saveBtn,10,0,1,3);
+    layout->addWidget(saveBtn,13,0,1,3);
 
     // Set QWidget as the central layout of the main window
     setCentralWidget(window);
@@ -109,6 +153,9 @@ MainWindow::MainWindow()
 
     connect( gameZoomChgBtn, SIGNAL(clicked()),this,SLOT(gameZoomChg()));
     connect( gameClipRearChgBtn, SIGNAL(clicked()),this,SLOT(gameClipRearChg()));
+
+    connect( audioLinkCbx, SIGNAL(stateChanged(int)),this,SLOT(audioLinkCbxChanged(int)));
+    connect( audioCutoffChgBtn, SIGNAL(clicked()),this,SLOT(audioCutoffChg()));
 
     connect( editorConstFltPatchCbx, SIGNAL(stateChanged(int)),this,SLOT(patchCbxChanged(int)));
     connect( editorZoomChgBtn, SIGNAL(clicked()),this,SLOT(editorZoomChg()));
@@ -129,9 +176,11 @@ void MainWindow::updateByState(){
     float editorClipRearValue = defaultEditorClipRear;
     bool hasEditorPatch = false;
 
-    if (state == EEstate::unloaded) {
+    if (!loaded) {
         gameZoomChgBtn->setEnabled(false);
         gameClipRearChgBtn->setEnabled(false);
+        audioLinkCbx->setEnabled(false);
+        audioCutoffChgBtn->setEnabled(false);
         editorConstFltPatchCbx->setEnabled(false);
         editorZoomChgBtn->setEnabled(false);
         editorClipRearChgBtn->setEnabled(false);
@@ -142,6 +191,9 @@ void MainWindow::updateByState(){
 
         gameZoomStatus->setText(QString::fromStdString(std::to_string(defaultGameZoom)));
         gameClipRearStatus->setText(QString::fromStdString(std::to_string(defaultGameClipRear)));
+
+        audioCutoffStatus->setText(QString::number(defaultAudioFadeEnd,'f',2)
+                                   + " (fade from " + QString::number(defaultAudioFadeStart,'f',2) + ")");
 
         editorConstFltPatchCbx->blockSignals(true);
         editorConstFltPatchCbx->setCheckState(Qt::Unchecked);
@@ -163,6 +215,20 @@ void MainWindow::updateByState(){
 
         gameZoomStatus->setText(QString::fromStdString(std::to_string(gameZoomValue)));
         gameClipRearStatus->setText(QString::fromStdString(std::to_string(gameClipRearValue)));
+
+        // Not sure if the audio prefix is present everywhere -> separate state/check
+        audioLinkCbx->setEnabled(hasAudioPatch());
+        audioCutoffChgBtn->setEnabled(hasAudioPatch());
+        if (hasAudioPatch()) {
+            audioCutoffStatus->setText(
+                QString::number(*loadedAudioFadeEnd,'f',2)
+                + " (fade from "
+                + QString::number(*loadedAudioFadeStart,'f',2)
+                + ")"
+            );
+        } else {
+            audioCutoffStatus->setText("audio pattern not found in this file");
+        }
 
         editorConstFlt = *loadedEditorConstFlt;
         hasEditorPatch = defaultGameConstFlt == editorConstFlt;
@@ -201,106 +267,135 @@ void MainWindow::openFileClicked() {
             (std::istreambuf_iterator<char>(inputFile)),
             (std::istreambuf_iterator<char>())
             );
+        inputFile.close();
 
         MainWindow::path = filepath;
         MainWindow::data = file;
 
-        if (file.size() == EELength) {
-            std::cout << "File is Empire Earth" << std::endl;
-            state = EEstate::loadedEE;
-            loadedGameZoom = reinterpret_cast<float*>(data.data()+EEGameZoomPos);
-            loadedGameClipRear = reinterpret_cast<float*>(data.data()+EEGameClipRearPos);
-            loadedEditorConstFlt = reinterpret_cast<float*>(data.data()+EEEditorConstFltPos);
-            loadedEditorZoom = reinterpret_cast<float*>(data.data()+EEEditorZoomPos);
-            loadedEditorClipRear = reinterpret_cast<float*>(data.data()+EEEditorClipRearPos);
-            fileString = "File EE (Empire Earth) loaded:\n" + path.toStdString();
-        } else if (file.size() == EEAOCLength) {
-            std::cout << "File is Empire Earth Art of Conquest" << std::endl;
-            state = EEstate::loadedEEAOC;
-            loadedGameZoom = reinterpret_cast<float*>(data.data()+EEAOCGameZoomPos);
-            loadedGameClipRear = reinterpret_cast<float*>(data.data()+EEAOCGameClipRearPos);
-            loadedEditorConstFlt = reinterpret_cast<float*>(data.data()+EEAOCEditorConstFltPos);
-            loadedEditorZoom = reinterpret_cast<float*>(data.data()+EEAOCEditorZoomPos);
-            loadedEditorClipRear = reinterpret_cast<float*>(data.data()+EEAOCEditorClipRearPos);
-            fileString = "File EE-AOC (Empire Earth - The Art of Conquest) loaded:\n" + path.toStdString();
+        if (locateCameraFields()) {
+            // Found camera bits -> can load
+            loaded = true;
+            // Check if audio bits are present too
+            locateAudioFields();
 
-        } else if (file.size() == EEGOG25Length) {
-            std::cout << "File is Empire Earth (GOG 2025 Update)" << std::endl;
-            state = EEstate::loadedEEGOG25;
-            loadedGameZoom = reinterpret_cast<float*>(data.data()+EEGOG25GameZoomPos);
-            loadedGameClipRear = reinterpret_cast<float*>(data.data()+EEGOG25GameClipRearPos);
-            loadedEditorConstFlt = reinterpret_cast<float*>(data.data()+EEGOG25EditorConstFltPos);
-            loadedEditorZoom = reinterpret_cast<float*>(data.data()+EEGOG25EditorZoomPos);
-            loadedEditorClipRear = reinterpret_cast<float*>(data.data()+EEGOG25EditorClipRearPos);
-            fileString = "File EE (Empire Earth; GOG 2025 Update) loaded:\n" + path.toStdString();
-
-        } else if (file.size() == EEAOCGOG25Length) {
-            std::cout << "File is Empire Earth Art of Conquest (GOG 2025 Update)" << std::endl;
-            state = EEstate::loadedEEAOC;
-            loadedGameZoom = reinterpret_cast<float*>(data.data()+EEAOCGOG25GameZoomPos);
-            loadedGameClipRear = reinterpret_cast<float*>(data.data()+EEAOCGOG25GameClipRearPos);
-            loadedEditorConstFlt = reinterpret_cast<float*>(data.data()+EEAOCGOG25EditorConstFltPos);
-            loadedEditorZoom = reinterpret_cast<float*>(data.data()+EEAOCGOG25EditorZoomPos);
-            loadedEditorClipRear = reinterpret_cast<float*>(data.data()+EEAOCGOG25EditorClipRearPos);
-            fileString = "File EE-AOC (Empire Earth - The Art of Conquest; GOG 2025 Update) loaded:\n" + path.toStdString();
-
-        } else if (file.size() == NeoEELength) {
-            std::cout << "File is Empire Earth (NeoEE)" << std::endl;
-            state = EEstate::loadedNeoEE;
-            loadedGameZoom = reinterpret_cast<float*>(data.data()+NeoEEGameZoomPos);
-            loadedGameClipRear = reinterpret_cast<float*>(data.data()+NeoEEGameClipRearPos);
-            loadedEditorConstFlt = reinterpret_cast<float*>(data.data()+NeoEEEditorConstFltPos);
-            loadedEditorZoom = reinterpret_cast<float*>(data.data()+NeoEEEditorZoomPos);
-            loadedEditorClipRear = reinterpret_cast<float*>(data.data()+NeoEEEditorClipRearPos);
-            fileString = "File EE (NeoEE Empire Earth) loaded:\n" + path.toStdString();
-
-        } else if (file.size() == NeoEEAOCLength) {
-            std::cout << "File is Empire Earth Art of Conquest (NeoEE)" << std::endl;
-            state = EEstate::loadedNeoEEAOC;
-            loadedGameZoom = reinterpret_cast<float*>(data.data()+NeoEEAOCGameZoomPos);
-            loadedGameClipRear = reinterpret_cast<float*>(data.data()+NeoEEAOCGameClipRearPos);
-            loadedEditorConstFlt = reinterpret_cast<float*>(data.data()+NeoEEAOCEditorConstFltPos);
-            loadedEditorZoom = reinterpret_cast<float*>(data.data()+NeoEEAOCEditorZoomPos);
-            loadedEditorClipRear = reinterpret_cast<float*>(data.data()+NeoEEAOCEditorClipRearPos);
-            fileString = "File EE-AOC (NeoEE Empire Earth - The Art of Conquest) loaded:\n" + path.toStdString();
-
-        } else if (file.size() == EENoCDLength) {
-            std::cout << "File is Empire Earth (No CD)" << std::endl;
-            state = EEstate::loadedEENoCD;
-            loadedGameZoom = reinterpret_cast<float*>(data.data()+EENoCDGameZoomPos);
-            loadedGameClipRear = reinterpret_cast<float*>(data.data()+EENoCDGameClipRearPos);
-            loadedEditorConstFlt = reinterpret_cast<float*>(data.data()+EENoCDEditorConstFltPos);
-            loadedEditorZoom = reinterpret_cast<float*>(data.data()+EENoCDEditorZoomPos);
-            loadedEditorClipRear = reinterpret_cast<float*>(data.data()+EENoCDEditorClipRearPos);
-            fileString = "File EE (Empire Earth No CD) loaded:\n" + path.toStdString();
-
+            fileString = "File loaded ("
+                + std::to_string(data.size())
+                + " bytes"
+                + (hasAudioPatch() ? ", audio patch available" : ", audio pattern not found")
+                + "):\n"
+                + path.toStdString();
         } else {
-            std::cout << "Unknown file with size " << std::to_string(file.size()) << std::endl;
-            printErrorMessage("Unknown file! A file of the following size is expected: 6321152, 6321664, 6319567, 6262784, 12657664, 12062720, 4079617 bytes");
-            state = EEstate::unloaded;
+            // Error msg
+            std::cout << "Camera constants pattern not found in file of size " << std::to_string(data.size()) << std::endl;
+            printErrorMessage(
+                "Unrecognized file.",
+                "Could not locate the camera constants in this file. It may not be a supported "
+                + "Empire Earth / Empire Earth: The Art of Conquest executable, or it has already "
+                + "been patched by an incompatible tool."
+            );
+
+            loaded = false;
             loadedGameZoom = nullptr;
             loadedGameClipRear = nullptr;
             loadedEditorConstFlt = nullptr;
             loadedEditorZoom = nullptr;
             loadedEditorClipRear = nullptr;
+            loadedAudioFadeStart = nullptr;
+            loadedAudioFadeEnd = nullptr;
+            loadedAudioFadeSlope = nullptr;
             fileString = "No file loaded";
         }
     } else{
+        inputFile.close();
         printErrorMessage("Error while reading the file");
-        state = EEstate::unloaded;
+
+        loaded = false;
         loadedGameZoom = nullptr;
         loadedGameClipRear = nullptr;
         loadedEditorConstFlt = nullptr;
         loadedEditorZoom = nullptr;
         loadedEditorClipRear = nullptr;
+        loadedAudioFadeStart = nullptr;
+        loadedAudioFadeEnd = nullptr;
+        loadedAudioFadeSlope = nullptr;
         fileString = "No file loaded";
     }
-    inputFile.close();
     updateByState();
 }
 
+long MainWindow::findPattern(const std::vector<char> &binary_data, const std::vector<unsigned char> &pattern) {
+    if (pattern.empty() || binary_data.size() < pattern.size()) return -1;
+
+    // Search using iterator
+    auto it = std::search(binary_data.begin(), binary_data.end(), pattern.begin(), pattern.end(),
+        [](char a, unsigned char b) {
+            return static_cast<unsigned char>(a) == b;
+        }
+    );
+
+    if (it == binary_data.end()) {
+        //No match found :(
+        return -1;
+    } else {
+        // Found it!
+        return static_cast<long>(std::distance(binary_data.begin(), it));
+    }
+}
+
+bool MainWindow::locateCameraFields() {
+    long match = findPattern(data, CameraPrefixPattern);
+
+    if (match < 0) {
+        // Stop if no match
+        return false;
+    }
+
+    // Get offset of prefix end
+    long fieldsBase = match + static_cast<long>(CameraPrefixPattern.size());
+
+    if (static_cast<size_t>(fieldsBase) + EditorClipRearFieldOffset + sizeof(float) > data.size()) {
+        // Last field is outside of file -> weird -> stop!
+        return false;
+    }
+
+    // Check if the constant is as expected (somewhat unnecessary though :O -> should not happen!)
+    float gameConstCheck;
+    std::memcpy(&gameConstCheck, data.data() + fieldsBase + GameConstFieldOffset, sizeof(float));
+    if (std::fabs(gameConstCheck - defaultGameConstFlt) > 0.0001f) {
+        std::cout << "Unexpected game constant value: " << gameConstCheck << std::endl;
+        return false;
+    }
+
+    // Set pointers by offset
+    loadedEditorConstFlt = reinterpret_cast<float*>(data.data() + fieldsBase + EditorConstFieldOffset);
+    loadedGameZoom = reinterpret_cast<float*>(data.data() + fieldsBase + GameZoomFieldOffset);
+    loadedGameClipRear = reinterpret_cast<float*>(data.data() + fieldsBase + GameClipRearFieldOffset);
+    loadedEditorZoom = reinterpret_cast<float*>(data.data() + fieldsBase + EditorZoomFieldOffset);
+    loadedEditorClipRear = reinterpret_cast<float*>(data.data() + fieldsBase + EditorClipRearFieldOffset);
+    return true;
+}
+
+void MainWindow::locateAudioFields() {
+    // Similar to locateCameraFields
+    long match = findPattern(data, AudioPrefixPattern);
+
+    long fieldsBase = match < 0 ? -1 : match + static_cast<long>(AudioPrefixPattern.size());
+    if (fieldsBase < 0 || static_cast<size_t>(fieldsBase) + AudioFadeSlopeFieldOffset + sizeof(float) > data.size()) {
+        // Found no prefix -> stop here
+        loadedAudioFadeStart = nullptr;
+        loadedAudioFadeEnd = nullptr;
+        loadedAudioFadeSlope = nullptr;
+        return;
+    }
+
+    // Set pointers by offset
+    loadedAudioFadeStart = reinterpret_cast<float*>(data.data() + fieldsBase + AudioFadeStartFieldOffset);
+    loadedAudioFadeEnd = reinterpret_cast<float*>(data.data() + fieldsBase + AudioFadeEndFieldOffset);
+    loadedAudioFadeSlope = reinterpret_cast<float*>(data.data() + fieldsBase + AudioFadeSlopeFieldOffset);
+}
+
 void MainWindow::gameZoomChg() {
-    if (state == EEstate::unloaded)
+    if (!loaded)
         return;
 
     double val = QInputDialog::getDouble(nullptr, "Set value for Game Zoom",
@@ -311,19 +406,68 @@ void MainWindow::gameZoomChg() {
 }
 
 void MainWindow::gameClipRearChg() {
-    if (state == EEstate::unloaded)
+    if (!loaded)
         return;
 
     double val = QInputDialog::getDouble(nullptr, "Set value for Game Clip Rear",
                "Value:", *loadedGameClipRear);
 
     *loadedGameClipRear = val;
+    if (audioLinkCbx->isChecked())
+        applyAudioCutoff(*loadedGameClipRear);
+    updateByState();
+}
+
+bool MainWindow::hasAudioPatch() const {
+    return loadedAudioFadeStart != nullptr && loadedAudioFadeEnd != nullptr && loadedAudioFadeSlope != nullptr;
+}
+
+void MainWindow::applyAudioCutoff(float fadeEnd) {
+    if (!hasAudioPatch())
+        return;
+
+    float fadeStart = fadeEnd * audioFadeStartRatio;
+    if (!(fadeEnd > 0.0) || !(fadeEnd - fadeStart > 0.001)) {
+        // Invalid valeu!
+        printErrorMessage("Invalid fadeEnd distance.", "The value must be greater than 0. Common values are 35 (stock) up to your Rear Clipping value.");
+        return;
+    }
+
+    *loadedAudioFadeStart = fadeStart;
+    *loadedAudioFadeEnd = fadeEnd;
+    // slope is precomputed
+    *loadedAudioFadeSlope = 1.0 / (fadeEnd - fadeStart);
+}
+
+void MainWindow::audioLinkCbxChanged(int newState) {
+    if (!loaded)
+        return;
+
+    if (newState == Qt::Checked) {
+        applyAudioCutoff(*loadedGameClipRear);
+    }
+
+    updateByState();
+}
+
+void MainWindow::audioCutoffChg() {
+    if (!loaded || !hasAudioPatch())
+        return;
+
+    double val = QInputDialog::getDouble(nullptr, "Set value for Audio Fade End",
+        "Value:", *loadedAudioFadeEnd);
+
+    audioLinkCbx->blockSignals(true);
+    audioLinkCbx->setCheckState(Qt::Unchecked);
+    audioLinkCbx->blockSignals(false);
+
+    applyAudioCutoff(val);
     updateByState();
 }
 
 void MainWindow::patchCbxChanged(int newState) {
     // ignore invalid state
-    if (state == EEstate::unloaded)
+    if (!loaded)
         return;
 
     // Patch binary for scenario editor constant
@@ -339,7 +483,7 @@ void MainWindow::patchCbxChanged(int newState) {
 }
 
 void MainWindow::editorZoomChg() {
-    if (state == EEstate::unloaded)
+    if (!loaded)
         return;
 
     double val = QInputDialog::getDouble(nullptr, "Set value for Editor Zoom",
@@ -350,7 +494,7 @@ void MainWindow::editorZoomChg() {
 }
 
 void MainWindow::editorClipRearChg() {
-    if (state == EEstate::unloaded)
+    if (!loaded)
         return;
 
     double val = QInputDialog::getDouble(nullptr, "Set value for Editor Clip Rear",
@@ -361,7 +505,7 @@ void MainWindow::editorClipRearChg() {
 }
 
 void MainWindow::setDefaultClicked(){
-    if (state == EEstate::unloaded)
+    if (!loaded)
         return;
 
     *loadedGameZoom = defaultGameZoom;
@@ -369,6 +513,11 @@ void MainWindow::setDefaultClicked(){
     *loadedEditorConstFlt = defaultEditorConstFlt;
     *loadedEditorZoom = defaultEditorZoom;
     *loadedEditorClipRear = defaultEditorClipRear;
+    if (hasAudioPatch()) {
+        *loadedAudioFadeStart = defaultAudioFadeStart;
+        *loadedAudioFadeEnd = defaultAudioFadeEnd;
+        *loadedAudioFadeSlope = defaultAudioFadeSlope;
+    }
     updateByState();
 }
 

@@ -30,3 +30,15 @@
 *.exe
 *.out
 *.app
+/EmpireEarthZoomChanger
+
+# QMake stuff
+Makefile
+Makefile.*
+.qmake.stash
+object_script.*
+moc_*.cpp
+moc_*.h
+moc_predefs.h
+qrc_*.cpp
+ui_*.h
