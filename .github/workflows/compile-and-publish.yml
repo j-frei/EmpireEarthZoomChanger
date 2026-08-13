@@ -44,10 +44,22 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: C:\QtInstall
-          key: qt-5.15.2-static-msvc-x86-qtbase-v2
+          key: qt-5.15.2-static-msvc-x86-qtbase-v3
+
+      - name: Check Qt install
+        id: qt-check
+        shell: cmd
+        run: |
+          if exist C:\QtInstall\bin\qmake.exe (
+            >>"%GITHUB_OUTPUT%" echo ok=true
+          ) else (
+            >>"%GITHUB_OUTPUT%" echo ok=false
+            echo No usable Qt at C:\QtInstall - rebuilding
+            if exist C:\QtInstall dir /s /b C:\QtInstall
+          )
 
       - name: Download Qt 5.15.2 qtbase Source
-        if: steps.qt-cache.outputs.cache-hit != 'true'
+        if: steps.qt-cache.outputs.ok != 'true'
         shell: cmd
         run: |
           curl.exe -fLO https://download.qt.io/archive/qt/5.15/5.15.2/submodules/qtbase-everywhere-src-5.15.2.zip || exit /b 1
@@ -55,7 +67,7 @@ jobs:
           ren qtbase-everywhere-src-5.15.2 QtSrc
 
       - name: Build and Install Static Qt
-        if: steps.qt-cache.outputs.cache-hit != 'true'
+        if: steps.qt-cache.outputs.ok != 'true'
         shell: cmd
         run: |
           call "%VCVARS%" x64_x86 -vcvars_ver=14.44 || exit /b 1
@@ -67,11 +79,11 @@ jobs:
           nmake install
 
       - name: Save static Qt cache
-        if: steps.qt-cache.outputs.cache-hit != 'true'
+        if: steps.qt-cache.outputs.ok != 'true'
         uses: actions/cache/save@v4
         with:
           path: C:\QtInstall
-          key: qt-5.15.2-static-msvc-x86-qtbase-v2
+          key: qt-5.15.2-static-msvc-x86-qtbase-v3
 
       - name: Build EmpireEarthZoomChanger
         shell: cmd
