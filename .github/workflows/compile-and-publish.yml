@@ -12,73 +12,94 @@ on:
   pull_request: {}
   workflow_dispatch:
 
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: windows-2025
+    timeout-minutes: 180
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Install Build Dependencies
-        shell: powershell
-        run: |
-          choco install strawberryperl python3 -y
-          git config --global core.autocrlf false
+        shell: cmd
+        run: choco install strawberryperl -y --no-progress
 
-      - name: Cache static Qt build
+      - name: Locate MSVC
+        shell: pwsh
+        run: |
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+          if (-not $vs) { throw "No Visual Studio installation found" }
+          "VCVARS=$vs\VC\Auxiliary\Build\vcvarsall.bat" | Out-File $env:GITHUB_ENV -Append
+
+      - name: Restore static Qt cache
         id: qt-cache
-        uses: actions/cache@v4
+        uses: actions/cache/restore@v4
         with:
           path: C:\QtInstall
-          key: qt-5.15.2-static-msvc-x86-qtbase-v1
+          key: qt-5.15.2-static-msvc-x86-qtbase-v2
 
       - name: Download Qt 5.15.2 qtbase Source
         if: steps.qt-cache.outputs.cache-hit != 'true'
         shell: cmd
         run: |
-          curl.exe -LO https://download.qt.io/archive/qt/5.15/5.15.2/submodules/qtbase-everywhere-src-5.15.2.zip
-          tar -xf qtbase-everywhere-src-5.15.2.zip
+          curl.exe -fLO https://download.qt.io/archive/qt/5.15/5.15.2/submodules/qtbase-everywhere-src-5.15.2.zip || exit /b 1
+          tar -xf qtbase-everywhere-src-5.15.2.zip || exit /b 1
           ren qtbase-everywhere-src-5.15.2 QtSrc
-
-      - name: Configure Qt for Static MSVC x86
-        if: steps.qt-cache.outputs.cache-hit != 'true'
-        shell: cmd
-        run: |
-          call "%ProgramFiles%\Microsoft Visual Studio\2026\Enterprise\VC\Auxiliary\Build\vcvars32.bat"
-          cd QtSrc
-          configure -static -release -platform win32-msvc ^
-            -prefix C:\QtInstall ^
-            -opensource -confirm-license ^
-            -nomake examples -nomake tests
 
       - name: Build and Install Static Qt
         if: steps.qt-cache.outputs.cache-hit != 'true'
         shell: cmd
         run: |
-          call "%ProgramFiles%\Microsoft Visual Studio\2026\Enterprise\VC\Auxiliary\Build\vcvars32.bat"
-          cd QtSrc
-          nmake
+          call "%VCVARS%" x64_x86 -vcvars_ver=14.44 || exit /b 1
+          cd QtSrc || exit /b 1
+          configure -static -static-runtime -release -platform win32-msvc ^
+            -prefix C:\QtInstall -opensource -confirm-license ^
+            -opengl desktop -mp -nomake examples -nomake tests || exit /b 1
+          nmake || exit /b 1
           nmake install
+
+      - name: Save static Qt cache
+        if: steps.qt-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: C:\QtInstall
+          key: qt-5.15.2-static-msvc-x86-qtbase-v2
 
       - name: Build EmpireEarthZoomChanger
         shell: cmd
         run: |
-          call "%ProgramFiles%\Microsoft Visual Studio\2026\Enterprise\VC\Auxiliary\Build\vcvars32.bat"
+          call "%VCVARS%" x64_x86 -vcvars_ver=14.44 || exit /b 1
           set PATH=C:\QtInstall\bin;%PATH%
-          qmake CONFIG+=release EmpireEarthZoomChanger.pro
-          nmake
+          qmake CONFIG+=release EmpireEarthZoomChanger.pro || exit /b 1
+          nmake || exit /b 1
+          dir /s /b *.exe
+          dumpbin /dependents release\EmpireEarthZoomChanger.exe
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EmpireEarthZoomChanger-i686
+          path: release/EmpireEarthZoomChanger.exe
 
       - name: Set tag name (YYYY-MM-DD)
         id: set_date_tag
         shell: bash
-        run: |
-          echo "now=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
+        run: echo "now=$(date +'%Y-%m-%d')" >> $GITHUB_OUTPUT
 
       - name: Upload to GitHub Releases
+        if: github.event_name != 'pull_request'
         uses: softprops/action-gh-release@v2
         with:
           files: release/EmpireEarthZoomChanger.exe
+          fail_on_unmatched_files: true
           name: Compiled CI/CD artifact
           body: "Latest i686 (x32) Qt5 app built automatically by GitHub Actions"
           tag_name: "release-${{ steps.set_date_tag.outputs.now }}"
