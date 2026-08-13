@@ -290,8 +290,8 @@ void MainWindow::openFileClicked() {
             printErrorMessage(
                 "Unrecognized file.",
                 "Could not locate the camera constants in this file. It may not be a supported "
-                + "Empire Earth / Empire Earth: The Art of Conquest executable, or it has already "
-                + "been patched by an incompatible tool."
+                "Empire Earth / Empire Earth: The Art of Conquest executable, or it has already "
+                "been patched by an incompatible tool."
             );
 
             loaded = false;

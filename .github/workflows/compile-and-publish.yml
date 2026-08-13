@@ -59,7 +59,7 @@ jobs:
           )
 
       - name: Download Qt 5.15.2 qtbase Source
-        if: steps.qt-cache.outputs.ok != 'true'
+        if: steps.qt-check.outputs.ok != 'true'
         shell: cmd
         run: |
           curl.exe -fLO https://download.qt.io/archive/qt/5.15/5.15.2/submodules/qtbase-everywhere-src-5.15.2.zip || exit /b 1
@@ -67,19 +67,20 @@ jobs:
           ren qtbase-everywhere-src-5.15.2 QtSrc
 
       - name: Build and Install Static Qt
-        if: steps.qt-cache.outputs.ok != 'true'
+        if: steps.qt-check.outputs.ok != 'true'
         shell: cmd
         run: |
           call "%VCVARS%" x64_x86 -vcvars_ver=14.44 || exit /b 1
           cd QtSrc || exit /b 1
-          configure -static -static-runtime -release -platform win32-msvc ^
+          call configure -static -static-runtime -release -platform win32-msvc ^
             -prefix C:\QtInstall -opensource -confirm-license ^
             -opengl desktop -mp -nomake examples -nomake tests || exit /b 1
           nmake || exit /b 1
-          nmake install
+          nmake install || exit /b 1
+          if not exist C:\QtInstall\bin\qmake.exe (echo ERROR: qmake missing after install & exit /b 1)
 
       - name: Save static Qt cache
-        if: steps.qt-cache.outputs.ok != 'true'
+        if: steps.qt-check.outputs.ok != 'true'
         uses: actions/cache/save@v4
         with:
           path: C:\QtInstall
